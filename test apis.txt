@@ -1,0 +1,315 @@
+To test your **vendor** and **ledger** APIs, I'll provide you with a set of **test cases** and **scenarios**. These tests will cover both normal and extreme cases to ensure everything works as expected.
+
+You can use **Postman**, **Jest** with **Supertest**, or any testing framework of your choice to run these API tests. Below is the test suite for both **Vendor** and **Ledger** APIs.
+
+### 1. **Testing the Vendor API**
+
+#### a. Create Vendor API (`POST /api/vendors`)
+- **Test Case 1: Valid Vendor Creation**
+  - **Request**:
+    ```json
+    {
+      "company_name": "ABC Corp",
+      "supplier_name": "John Doe",
+      "contact_number": "1234567890",
+      "bank_details": "Bank XYZ"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 201
+    - Message: "Vendor created successfully"
+    - VendorId: (some id)
+
+- **Test Case 2: Vendor Creation with Missing Fields**
+  - **Request**:
+    ```json
+    {
+      "company_name": "XYZ Corp",
+      "contact_number": "9876543210",
+      "bank_details": "Bank ABC"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 400
+    - Message: "Supplier name must be a valid string"
+
+- **Test Case 3: Vendor Already Exists**
+  - **Request**:
+    ```json
+    {
+      "company_name": "ABC Corp",
+      "supplier_name": "John Doe",
+      "contact_number": "1234567890",
+      "bank_details": "Bank XYZ"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 400
+    - Message: "Vendor with this company name already exists"
+
+#### b. Update Vendor API (`PUT /api/vendors/:id`)
+- **Test Case 1: Valid Vendor Update**
+  - **Request**:
+    ```json
+    {
+      "company_name": "ABC Corp Updated",
+      "supplier_name": "John Updated",
+      "contact_number": "1234567890",
+      "bank_details": "Updated Bank"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 200
+    - Message: "Vendor and ledger updated successfully"
+
+- **Test Case 2: Invalid Vendor ID**
+  - **Request**:
+    ```json
+    {
+      "company_name": "Invalid Corp",
+      "supplier_name": "Invalid",
+      "contact_number": "0000000000",
+      "bank_details": "Invalid Bank"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 400
+    - Message: "Invalid vendor ID"
+
+#### c. Delete Vendor API (`DELETE /api/vendors/:id`)
+- **Test Case 1: Valid Vendor Deletion**
+  - **Request**:
+    - Vendor ID: `1`
+  - **Expected Response**:
+    - Status: 200
+    - Message: "Vendor deleted successfully"
+
+- **Test Case 2: Invalid Vendor ID**
+  - **Request**:
+    - Vendor ID: `999`
+  - **Expected Response**:
+    - Status: 404
+    - Message: "Vendor not found"
+
+#### d. Get All Vendors API (`GET /api/vendors`)
+- **Test Case 1: Get All Vendors**
+  - **Expected Response**:
+    - Status: 200
+    - Response Body: A list of all vendors with their details.
+
+---
+
+### 2. **Testing the Ledger API**
+
+#### a. Create Ledger API (`POST /api/ledgers`)
+- **Test Case 1: Valid Ledger Creation**
+  - **Request**:
+    ```json
+    {
+      "vendor_name": "ABC Corp",
+      "date": "2025-02-11",
+      "challan_no": "1234",
+      "description": "Test entry",
+      "quantity": 10,
+      "debit": 100,
+      "credit": 0,
+      "payment_method": "Cash"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 201
+    - Message: "Ledger entry created successfully"
+    - LedgerId: (some id)
+
+- **Test Case 2: Missing Vendor Name**
+  - **Request**:
+    ```json
+    {
+      "date": "2025-02-11",
+      "challan_no": "1234",
+      "description": "Test entry",
+      "quantity": 10,
+      "debit": 100,
+      "credit": 0,
+      "payment_method": "Cash"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 400
+    - Message: "Vendor name is required"
+
+- **Test Case 3: Invalid Date Format**
+  - **Request**:
+    ```json
+    {
+      "vendor_name": "ABC Corp",
+      "date": "2025-15-11",
+      "challan_no": "1234",
+      "description": "Test entry",
+      "quantity": 10,
+      "debit": 100,
+      "credit": 0,
+      "payment_method": "Cash"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 400
+    - Message: "Invalid date format"
+
+#### b. Update Ledger API (`PUT /api/ledgers/:id`)
+- **Test Case 1: Valid Ledger Update**
+  - **Request**:
+    ```json
+    {
+      "date": "2025-02-12",
+      "challan_no": "5678",
+      "description": "Updated entry",
+      "quantity": 20,
+      "debit": 200,
+      "credit": 0,
+      "payment_method": "Credit"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 200
+    - Message: "Ledger entry updated successfully"
+
+- **Test Case 2: Invalid Ledger ID**
+  - **Request**:
+    ```json
+    {
+      "date": "2025-02-12",
+      "challan_no": "5678",
+      "description": "Updated entry",
+      "quantity": 20,
+      "debit": 200,
+      "credit": 0,
+      "payment_method": "Credit"
+    }
+    ```
+  - **Expected Response**:
+    - Status: 404
+    - Message: "Ledger entry not found"
+
+#### c. Delete Ledger API (`DELETE /api/ledgers/:id`)
+- **Test Case 1: Valid Ledger Deletion**
+  - **Request**:
+    - Ledger ID: `1`
+  - **Expected Response**:
+    - Status: 200
+    - Message: "Ledger entry deleted successfully"
+
+- **Test Case 2: Invalid Ledger ID**
+  - **Request**:
+    - Ledger ID: `999`
+  - **Expected Response**:
+    - Status: 404
+    - Message: "Ledger entry not found"
+
+#### d. Get All Ledgers by Vendor API (`GET /api/ledgers/:vendor_name`)
+- **Test Case 1: Get All Ledgers for Vendor**
+  - **Request**:
+    - Vendor Name: `ABC Corp`
+  - **Expected Response**:
+    - Status: 200
+    - Response Body: List of ledger entries for `ABC Corp`.
+
+#### e. Get Ledger by Date Range (`GET /api/ledgers`)
+- **Test Case 1: Get Ledgers for Vendor within Date Range**
+  - **Request**:
+    - Vendor Name: `ABC Corp`
+    - Start Date: `2025-02-01`
+    - End Date: `2025-02-10`
+  - **Expected Response**:
+    - Status: 200
+    - Response Body: List of ledger entries within the specified date range.
+
+---
+
+### 3. **Extreme and Edge Case Scenarios**
+
+- **Scenario 1: Vendor or Ledger Creation with Empty Fields**
+  - Requesting a vendor or ledger with missing required fields or empty fields to check validation and error handling.
+
+- **Scenario 2: Very Large Numbers for Debit or Credit**
+  - Test creating a ledger entry with extremely large values (e.g., debit or credit amounts in the billions) to ensure the database can handle large numbers.
+
+- **Scenario 3: Invalid Date Formats**
+  - Submitting dates with invalid formats or out-of-range dates to ensure proper validation.
+
+- **Scenario 4: Special Characters or SQL Injection Attempts**
+  - Try submitting inputs that contain special characters or possible SQL injection attempts to test the application’s security.
+
+---
+
+### Example Using **Supertest** (Node.js)
+
+Here’s how you can write tests for your APIs using **Supertest** and **Jest**.
+
+```javascript
+import request from 'supertest';
+import app from '../app'; // Your express app
+
+describe('Vendor API', () => {
+  it('should create a vendor', async () => {
+    const res = await request(app)
+      .post('/api/vendors')
+      .send({
+        company_name: 'Test Vendor',
+        supplier_name: 'Test Supplier',
+        contact_number: '1234567890',
+        bank_details: 'Bank XYZ',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.message).toBe('Vendor created successfully');
+  });
+
+  it('should return error for missing fields', async () => {
+    const res = await request(app)
+      .post('/api/vendors')
+      .send({
+        company_name: 'Test Vendor',
+        contact_number: '1234567890',
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Supplier name must be a valid string');
+  });
+});
+
+describe('Ledger API', () => {
+  it('should create a ledger entry', async () => {
+    const res = await request(app)
+      .post('/api/ledgers')
+      .send({
+        vendor_name: 'Test Vendor',
+        date: '2025-02-11',
+        challan_no: '1234',
+        description: 'Test Ledger',
+        quantity: 10,
+        debit: 100,
+        credit: 0,
+        payment_method: 'Cash',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.message).toBe('Ledger entry created successfully');
+  });
+
+  it('should return error for missing vendor name', async () => {
+    const res = await request(app)
+      .post('/api/ledgers')
+      .send({
+        date: '2025-02-11',
+        challan_no: '1234',
+        description: 'Test Ledger',
+        quantity: 10,
+        debit: 100,
+        credit: 0,
+        payment_method: 'Cash',
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Vendor name is required');
+  });
+});
+```
+
+This suite of tests checks the basic functionality of your APIs, as well as edge cases. You can expand these tests further to cover more specific cases.
