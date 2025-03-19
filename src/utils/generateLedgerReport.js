@@ -1,123 +1,206 @@
-// import { generatePDFReport } from '../reports/generatePDFReport.js';
-// import { generateExcelReport } from '../reports/generateExcelReport.js';
+// import { generatePDFReport } from "../reports/generatePDFReport.js"
+// import { generateExcelReport } from "../reports/generateExcelReport.js"
+// import pool from "../config/database.js"
 
 // export const generateLedgerReport = async (req, res) => {
 //   const { vendor_name } = req.params;
 //   const { start_date, end_date, format } = req.query;
 
 //   try {
-//     const [ledgerEntries] = await pool.query(
-//       `SELECT 
-//         ROW_NUMBER() OVER (ORDER BY l.date) as s_no, 
-//         v.company_name, 
-//         v.contact_number as phone_no, 
-//         l.date, 
-//         l.challan_no, 
-//         l.description, 
-//         l.quantity, 
-//         l.debit, 
-//         l.credit, 
-//         l.payment_method,
-//         l.price_per_meter
-//       FROM ledgers l 
-//       JOIN vendors v ON l.vendor_name = v.company_name 
-//       WHERE l.vendor_name = ? 
-//       ${start_date && end_date ? 'AND l.date BETWEEN ? AND ?' : ''} 
-//       ORDER BY l.date`,
-//       start_date && end_date ? [vendor_name, start_date, end_date] : [vendor_name]
+//     // First get complete vendor details
+//     const [vendorData] = await pool.execute(
+//       "SELECT id, company_name, supplier_name, contact_number, bank_details FROM vendors WHERE company_name = ?",
+//       [vendor_name]
 //     );
 
-//     if (ledgerEntries.length === 0) {
-//       return res.status(404).json({ message: "Vendor not found or no ledger entries" });
+//     if (vendorData.length === 0) {
+//       return res.status(404).json({ message: "Vendor not found." });
 //     }
 
-//     let runningBalance = 0;
-//     const totalDebit = ledgerEntries.reduce((acc, entry) => acc + (entry.debit === '-' ? 0 : parseFloat(entry.debit)), 0);
-//     const totalCredit = ledgerEntries.reduce((acc, entry) => acc + (entry.credit === '-' ? 0 : parseFloat(entry.credit)), 0);
-    
-//     const resultWithBalance = ledgerEntries.map((entry) => {
-//       runningBalance += (entry.debit === '-' ? 0 : parseFloat(entry.debit)) - (entry.credit === '-' ? 0 : parseFloat(entry.credit));
-//       const balance = Math.abs(runningBalance);
+//     const vendorDetails = vendorData[0];
 
-//       return { ...entry, balance };
+//     // Then get ledger entries
+//     let query = `
+//     SELECT 
+//     ROW_NUMBER() OVER (ORDER BY l.date) AS s_no, 
+//     v.company_name, 
+//     v.contact_number, 
+//     v.bank_details,
+//     l.date, 
+//     l.challan_no, 
+//     l.description, 
+//     l.quantity, 
+//     l.debit, 
+//     l.credit, 
+//     l.payment_method,
+//     l.cheque_number,
+//     l.price,
+//     l.unit
+//   FROM ledgers l
+//   JOIN vendors v ON l.vendor_name = v.company_name
+//   WHERE l.vendor_name = ?`;
+
+//     const queryParams = [vendor_name];
+
+//     if (start_date && end_date) {
+//       query += " AND l.date BETWEEN ? AND ?";
+//       queryParams.push(start_date, end_date);
+//     }
+
+//     query += " ORDER BY l.date";
+
+//     const [ledgerEntries] = await pool.execute(query, queryParams);
+
+//     if (ledgerEntries.length === 0) {
+//       return res.status(404).json({ message: "No ledger entries found for the given dates." });
+//     }
+
+//     // Adjust ledger entries by adding quantity * price to debit
+//     const adjustedLedgerEntries = ledgerEntries.map(entry => {
+//       // Calculate price * quantity
+//       const totalPrice = entry.quantity * entry.price;
+
+//       // Add this to the existing debit
+//       const calculatedDebit = entry.debit + totalPrice;
+
+//       // Calculate the balance by subtracting debit and adding credit
+//       let updatedBalance = calculatedDebit - entry.credit;
+
+//       // Ensure all values (debit, credit, balance) are positive
+//       const positiveDebit = Math.abs(calculatedDebit);
+//       const positiveCredit = Math.abs(entry.credit);
+//       const positiveBalance = Math.abs(updatedBalance);
+
+//       return {
+//         ...entry,
+//         debit: positiveDebit,
+//         credit: positiveCredit,
+//         balance: positiveBalance,
+//       };
 //     });
 
-//     const totalDebitPKR = `PKR ${totalDebit.toFixed(2)}`;
-//     const totalCreditPKR = `PKR ${totalCredit.toFixed(2)}`;
+//     const fileFormat =
+//       format === "excel" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/pdf";
+//     res.setHeader("Content-Type", fileFormat);
+//     res.setHeader("Content-Disposition", `attachment; filename="${vendorDetails.company_name}_ledger_report.${format}"`);
 
-//     if (format === 'pdf') {
-//       await generatePDFReport(res, ledgerEntries[0], resultWithBalance, start_date, end_date, totalDebitPKR, totalCreditPKR, Math.abs(runningBalance));
-//     } else if (format === 'excel') {
-//       await generateExcelReport(res, ledgerEntries[0], resultWithBalance, start_date, end_date, totalDebitPKR, totalCreditPKR, Math.abs(runningBalance));
+//     if (format === "pdf") {
+//       await generatePDFReport(res, vendorDetails, adjustedLedgerEntries, start_date, end_date);
+//     } else if (format === "excel") {
+//       await generateExcelReport(res, vendorDetails, adjustedLedgerEntries, start_date, end_date);
 //     } else {
-//       res.status(400).json({ message: "Invalid format specified. Use 'pdf' or 'excel'." });
+//       return res.status(400).json({ message: "Invalid format specified. Please use 'pdf' or 'excel'." });
 //     }
 //   } catch (error) {
-//     console.error('Error generating report:', error);
-//     res.status(500).json({ message: "Error generating report", error: error.message });
+//     console.error("Error generating report:", error);
+//     res.status(500).json({ message: "An error occurred while generating the report.", error: error.message });
 //   }
 // };
-import { generatePDFReport } from "../reports/generatePDFReport.js";
-import { generateExcelReport } from "../reports/generateExcelReport.js";
-import pool from "../config/database.js";
+import { generatePDFReport } from "../reports/generatePDFReport.js"
+import { generateExcelReport } from "../reports/generateExcelReport.js"
+import pool from "../config/database.js"
 
 export const generateLedgerReport = async (req, res) => {
-  const { vendor_name } = req.params;
-  const { start_date, end_date, format } = req.query;
+  const { vendor_name } = req.params
+  const { start_date, end_date, format } = req.query
 
   try {
-    let query = `
-      SELECT 
-        ROW_NUMBER() OVER (ORDER BY l.date) AS s_no, 
-        v.company_name, 
-        v.contact_number, 
-        v.bank_details,
-        l.date, 
-        l.challan_no, 
-        l.description, 
-        l.quantity, 
-        l.debit, 
-        l.credit, 
-        l.payment_method,
-        l.price_per_meter
-      FROM ledgers l
-      JOIN vendors v ON l.vendor_name = v.company_name
-      WHERE l.vendor_name = ?`;
+    // First get complete vendor details
+    const [vendorData] = await pool.execute(
+      "SELECT id, company_name, supplier_name, contact_number, bank_details FROM vendors WHERE company_name = ?",
+      [vendor_name],
+    )
 
-    const queryParams = [vendor_name];
-    if (start_date && end_date) {
-      query += " AND l.date BETWEEN ? AND ?";
-      queryParams.push(start_date, end_date);
+    if (vendorData.length === 0) {
+      return res.status(404).json({ message: "Vendor not found." })
     }
 
-    query += " ORDER BY l.date";
+    const vendorDetails = vendorData[0]
 
-    const [ledgerEntries] = await pool.execute(query, queryParams);
+    // Then get ledger entries
+    let query = `
+    SELECT 
+    ROW_NUMBER() OVER (ORDER BY l.date) AS s_no, 
+    v.company_name, 
+    v.contact_number, 
+    v.bank_details,
+    l.date, 
+    l.challan_no, 
+    l.description, 
+    l.quantity, 
+    l.debit, 
+    l.credit, 
+    l.payment_method,
+    l.cheque_number,
+    l.price,
+    l.unit
+  FROM ledgers l
+  JOIN vendors v ON l.vendor_name = v.company_name
+  WHERE l.vendor_name = ?`
+
+    const queryParams = [vendor_name]
+
+    if (start_date && end_date) {
+      query += " AND l.date BETWEEN ? AND ?"
+      queryParams.push(start_date, end_date)
+    }
+
+    query += " ORDER BY l.date"
+
+    const [ledgerEntries] = await pool.execute(query, queryParams)
 
     if (ledgerEntries.length === 0) {
-      return res.status(404).json({ message: "Vendor not found or no ledger entries for the given dates." });
+      return res.status(404).json({ message: "No ledger entries found for the given dates." })
     }
 
-    const vendorDetails = {
-      company_name: ledgerEntries[0].company_name,
-      contact_number: ledgerEntries[0].contact_number,
-      bank_details: ledgerEntries[0].bank_details,
-    };
+    // Adjust ledger entries by calculating quantity * price and adding to debit
+    const adjustedLedgerEntries = ledgerEntries.map((entry) => {
+      // Initialize variables for calculations
+      let totalPriceValue = 0
 
-    const fileFormat = format === "excel" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/pdf";
-    res.setHeader("Content-Type", fileFormat);
-    res.setHeader("Content-Disposition", `attachment; filename="${vendorDetails.company_name}_ledger_report.${format}"`);
+      // Process quantity and price if they exist and contain values
+      if (entry.quantity && entry.price) {
+        const quantities = entry.quantity.split(",").map((q) => Number.parseFloat(q.trim()) || 0)
+        const prices = entry.price.split(",").map((p) => Number.parseFloat(p.trim()) || 0)
+
+        // Calculate the sum of quantity * price for each pair
+        for (let i = 0; i < Math.min(quantities.length, prices.length); i++) {
+          totalPriceValue += quantities[i] * prices[i]
+        }
+      }
+
+      // Get the original debit and credit values
+      const originalDebit = Number.parseFloat(entry.debit || 0)
+      const originalCredit = Number.parseFloat(entry.credit || 0)
+
+      // Add the calculated price*quantity to the debit
+      const calculatedDebit = originalDebit + totalPriceValue
+
+      // Ensure all values are positive for display
+      return {
+        ...entry,
+        debit: Math.abs(calculatedDebit),
+        credit: Math.abs(originalCredit),
+        // Store the calculated price*quantity for reference
+        calculatedPrice: totalPriceValue,
+      }
+    })
+
+    const fileFormat =
+      format === "excel" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/pdf"
+    res.setHeader("Content-Type", fileFormat)
+    res.setHeader("Content-Disposition", `attachment; filename="${vendorDetails.company_name}_ledger_report.${format}"`)
 
     if (format === "pdf") {
-      await generatePDFReport(res, vendorDetails, ledgerEntries, start_date, end_date);
+      await generatePDFReport(res, vendorDetails, adjustedLedgerEntries, start_date, end_date)
     } else if (format === "excel") {
-      await generateExcelReport(res, vendorDetails, ledgerEntries, start_date, end_date);
+      await generateExcelReport(res, vendorDetails, adjustedLedgerEntries, start_date, end_date)
     } else {
-      return res.status(400).json({ message: "Invalid format specified. Please use 'pdf' or 'excel'." });
+      return res.status(400).json({ message: "Invalid format specified. Please use 'pdf' or 'excel'." })
     }
-
   } catch (error) {
-    console.error("Error generating report:", error);
-    res.status(500).json({ message: "An error occurred while generating the report.", error: error.message });
+    console.error("Error generating report:", error)
+    res.status(500).json({ message: "An error occurred while generating the report.", error: error.message })
   }
-};
+}
+
