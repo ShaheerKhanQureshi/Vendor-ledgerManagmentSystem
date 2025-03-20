@@ -1,7 +1,3 @@
-// host: process.env.DB_HOST || "184.168.124.181",
-// user: process.env.DB_USER || "noble",
-// password: process.env.DB_PASSWORD || "Noble@786",
-
 import express from "express"
 import mysql from "mysql2/promise"
 import cors from "cors"
@@ -14,7 +10,6 @@ import ledgerReportRoute from "./src/routes/reportRoutes.js"
 const app = express()
 const PORT = process.env.PORT || 5000
 
-// Create MySQL connection pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
   user: process.env.DB_USER || "root",
@@ -34,7 +29,6 @@ app.get('/', (req, res) => {
       message: 'Welcome to Noble Corner Legder & Vendor Managment System'
   });
 });
-// Existing routes
 app.use("/api", dashboardRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/ledgers", ledgerRoutes)
@@ -45,7 +39,7 @@ const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`)
 })
 
-// Test database connection
+
 ;(async () => {
   try {
     const connection = await pool.getConnection()

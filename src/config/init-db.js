@@ -4,11 +4,10 @@ async function initDatabase() {
   try {
     const connection = await pool.getConnection()
 
-    // Create database if not exists
+
     await connection.query("CREATE DATABASE IF NOT EXISTS noble_corner_ledger")
     await connection.query("USE noble_corner_ledger")
 
-    // Create users table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -18,7 +17,6 @@ async function initDatabase() {
       )
     `)
 
-    // Create vendors table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS vendors (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -30,7 +28,7 @@ async function initDatabase() {
       )
     `)
 
-    // Create ledgers table
+    
     await connection.query(`
       CREATE TABLE IF NOT EXISTS ledgers (
         id INT AUTO_INCREMENT PRIMARY KEY,

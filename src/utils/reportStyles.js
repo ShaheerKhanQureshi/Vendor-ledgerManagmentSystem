@@ -26,7 +26,6 @@ export const formatCurrency = (amount) => {
       maximumFractionDigits: 2
     }).format(amount);
   } catch (error) {
-    // Fallback formatting if Intl.NumberFormat fails
     return `Rs${parseFloat(amount).toFixed(2)}`;
   }
 };
